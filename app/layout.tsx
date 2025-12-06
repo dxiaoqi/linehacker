@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "AI Canvas Builder",
+  title: "LineHacker",
   description: "Visual workflow builder with AI assistance",
   generator: "v0.app",
 }
