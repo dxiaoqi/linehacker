@@ -652,7 +652,7 @@ export function CanvasToolbar() {
               <div
                 ref={popoverRef}
                 className={cn(
-                  "absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-[320px] sm:w-[400px]",
+                  "absolute bottom-full mb-6 left-1/2 -translate-x-1/2 w-[320px] sm:w-[400px]",
                   "bg-background border rounded-lg shadow-lg p-4 max-h-[60vh] overflow-y-auto",
                   (currentResponse?.status === "pending" || isLoading) && "ring-2 ring-primary",
                 )}
@@ -667,6 +667,7 @@ export function CanvasToolbar() {
                 <AIResponseRenderer
                   contents={currentResponse?.contents || []}
                   isLoading={isLoading}
+                  actions={currentResponse?.actions as any}
                   onAction={handleAction}
                   onSubmit={handleFormSubmit}
                   onCancel={handleCancel}

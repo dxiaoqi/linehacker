@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Check, X, ChevronRight, ChevronLeft } from "lucide-react"
+import { Check, X, ChevronRight, ChevronLeft, ChevronDown, Plus, Trash2, Link2, Edit, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type {
   AIContent,
   AITextContent,
@@ -23,10 +24,12 @@ import type {
   AISelectContent,
   AIFormField,
 } from "@/lib/types/ai-response"
+import type { AIAction } from "@/lib/ai-tools"
 
 interface AIResponseRendererProps {
   contents: AIContent[]
   isLoading?: boolean
+  actions?: AIAction[]
   onAction?: (actionId: string, data?: Record<string, unknown>) => void
   onSubmit?: (data: Record<string, unknown>) => void
   onCancel?: () => void
@@ -411,16 +414,126 @@ function FormRenderer({
 
 function ActionsRenderer({
   content,
+  actions,
   onAction,
 }: {
   content: AIActionsContent
+  actions?: AIAction[]
   onAction?: (actionId: string) => void
 }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const getActionIcon = (action: AIAction): React.ReactNode => {
+    switch (action.type) {
+      case "create":
+        return <Plus className="h-4 w-4" />
+      case "modify":
+        return <Edit className="h-4 w-4" />
+      case "connect":
+        return <Link2 className="h-4 w-4" />
+      case "delete":
+        return <Trash2 className="h-4 w-4" />
+      case "create-group":
+        return <FileText className="h-4 w-4" />
+      case "add-section":
+      case "update-section":
+      case "delete-section":
+        return <Edit className="h-4 w-4" />
+      case "reorganize":
+        return <FileText className="h-4 w-4" />
+    }
+  }
+
+  const getActionDescription = (action: AIAction): string => {
+    switch (action.type) {
+      case "create":
+        return `创建 ${action.nodeType} 节点: "${action.title}"`
+      case "modify":
+        return `修改节点 ${action.nodeId} 的 ${action.field}`
+      case "connect":
+        return `连接 "${action.sourceTitle || action.sourceNodeId || ""}" → "${action.targetTitle || action.targetNodeId || ""}"`
+      case "delete":
+        return `删除节点 ${action.nodeId}: ${action.reason}`
+      case "create-group":
+        return `创建分组: "${action.title}"`
+      case "add-section":
+        return `在节点 ${action.nodeId} 添加章节: "${action.sectionTitle}"`
+      case "update-section":
+        return `更新节点 ${action.nodeId} 的章节 ${action.sectionId}`
+      case "delete-section":
+        return `删除节点 ${action.nodeId} 的章节 ${action.sectionId}`
+      case "reorganize":
+        return `重组 ${action.nodeIds.length} 个节点: ${action.reason}`
+    }
+  }
+
+  const getActionDetails = (action: AIAction): string | null => {
+    switch (action.type) {
+      case "create":
+        if (action.description) return action.description
+        if (action.sections && action.sections.length > 0) {
+          return `包含 ${action.sections.length} 个章节`
+        }
+        return null
+      case "modify":
+        if (typeof action.newValue === "string") {
+          return action.newValue.length > 100 ? action.newValue.substring(0, 100) + "..." : action.newValue
+        }
+        return null
+      case "connect":
+        if (action.label) return `标签: "${action.label}"`
+        return `类型: ${action.weight}`
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="text-sm text-foreground leading-relaxed">
         <MarkdownRenderer content={{ type: "markdown", markdown: content.message }} />
       </div>
+
+      {/* Actions list collapsible */}
+      {actions && actions.length > 0 && (
+        <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+          <CollapsibleTrigger className="w-full">
+            <div className="flex items-center justify-between w-full p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <ChevronDown
+                  className={cn("h-4 w-4 text-muted-foreground transition-transform", !isExpanded && "-rotate-90")}
+                />
+                <span className="text-sm font-medium text-foreground">
+                  查看详细操作 ({actions.length} 项)
+                </span>
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+              {actions.map((action, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 p-2 rounded-md bg-background border border-border/50"
+                >
+                  <div className="mt-0.5 text-muted-foreground">{getActionIcon(action)}</div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="text-sm font-medium text-foreground">
+                      {getActionDescription(action)}
+                    </div>
+                    {getActionDetails(action) && (
+                      <div className="text-xs text-muted-foreground line-clamp-2">
+                        {getActionDetails(action)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       <div className="flex flex-wrap gap-2 pt-3 border-t">
         {content.actions.map((action) => (
           <Button
@@ -744,7 +857,14 @@ function LoadingIndicator() {
 }
 
 // Main renderer component
-export function AIResponseRenderer({ contents, isLoading, onAction, onSubmit, onCancel }: AIResponseRendererProps) {
+export function AIResponseRenderer({
+  contents,
+  isLoading,
+  actions,
+  onAction,
+  onSubmit,
+  onCancel,
+}: AIResponseRendererProps) {
   if (isLoading) {
     return <LoadingIndicator />
   }
@@ -764,7 +884,7 @@ export function AIResponseRenderer({ contents, isLoading, onAction, onSubmit, on
           case "form":
             return <FormRenderer key={index} content={content} onSubmit={onSubmit} onCancel={onCancel} />
           case "actions":
-            return <ActionsRenderer key={index} content={content} onAction={onAction} />
+            return <ActionsRenderer key={index} content={content} actions={actions} onAction={onAction} />
           case "choice":
             return <ChoiceRenderer key={index} content={content} onSubmit={onSubmit} onCancel={onCancel} />
           case "multi-choice":

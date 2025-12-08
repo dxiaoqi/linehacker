@@ -1,5 +1,6 @@
 import { useCanvasStore } from "@/lib/store/canvas-store"
 import type { ConnectionWeight } from "@/lib/types/canvas"
+import { applyLayout } from "@/lib/layout-engine"
 
 // AI Action Types
 export interface AICreateAction {
@@ -96,17 +97,15 @@ function getViewportCenter(): { x: number; y: number } {
 // Execute a single AI action
 export function executeAIAction(action: AIAction): AIActionResult {
   const store = useCanvasStore.getState()
+  
+  // Track if we need to apply layout after actions
+  const shouldApplyLayout = action.type === "create" || action.type === "connect"
 
   switch (action.type) {
     case "create": {
+      // Use a temporary position - layout will be applied after all actions
       const position = action.position || getViewportCenter()
-      // Add some randomness to avoid stacking
-      const offsetPosition = {
-        x: position.x + (Math.random() - 0.5) * 100,
-        y: position.y + (Math.random() - 0.5) * 100,
-      }
-
-      const nodeId = store.addNode(action.nodeType, offsetPosition)
+      const nodeId = store.addNode(action.nodeType, position)
 
       // Update node with title, description, and sections
       const updates: Record<string, unknown> = {
@@ -367,7 +366,34 @@ export function executeAIAction(action: AIAction): AIActionResult {
 
 // Execute multiple AI actions
 export function executeAIActions(actions: AIAction[]): AIActionResult[] {
-  return actions.map((action) => executeAIAction(action))
+  const results = actions.map((action) => executeAIAction(action))
+  
+  // Apply automatic layout after all actions are executed
+  // Only apply if we have multiple nodes
+  const store = useCanvasStore.getState()
+  const canvasNodes = store.nodes.filter((n) => n.type === "canvas-node")
+  const canvasEdges = store.edges
+  
+  // Apply layout if we have 2+ nodes
+  if (canvasNodes.length >= 2) {
+    const startPosition = getViewportCenter()
+    // Offset start position to the left to accommodate left-to-right flow
+    const layoutStartPosition = {
+      x: Math.max(100, startPosition.x - 200),
+      y: startPosition.y,
+    }
+    
+    applyLayout(
+      canvasNodes,
+      canvasEdges,
+      (nodeId, position) => {
+        store.updateNodePosition(nodeId, position)
+      },
+      layoutStartPosition,
+    )
+  }
+  
+  return results
 }
 
 // Build canvas context for AI

@@ -35,6 +35,7 @@ interface CanvasStore extends CanvasState {
   onConnect: (connection: Connection) => void
   addNode: (type: NodeType, position: { x: number; y: number }) => string
   updateNodeData: (nodeId: string, data: Partial<CanvasNodeData>) => void
+  updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void
   deleteNode: (nodeId: string) => void
 
   // Group operations
@@ -454,6 +455,19 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
                   lastModified: new Date().toISOString(),
                 },
               },
+            }
+          : node,
+      ),
+    })
+  },
+
+  updateNodePosition: (nodeId, position) => {
+    set({
+      nodes: get().nodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              position,
             }
           : node,
       ),

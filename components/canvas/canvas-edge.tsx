@@ -105,6 +105,7 @@ function CanvasEdgeComponent({
             position: "absolute",
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             pointerEvents: "all",
+            zIndex: panelOpen ? 9999 : "auto",
           }}
           className="nodrag nopan"
           onDoubleClick={handleDoubleClick}
@@ -118,7 +119,11 @@ function CanvasEdgeComponent({
           {!panelOpen && !label && <div className="w-12 h-12 cursor-pointer -m-6" title="Double-click to edit" />}
 
           {panelOpen && (
-            <div className="bg-card border rounded-lg shadow-lg p-3 min-w-[200px]" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="bg-card border rounded-lg shadow-lg p-3 min-w-[200px] z-[9999]"
+              style={{ zIndex: 9999 }}
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* Weight selection */}
               <div className="mb-3">
                 <p className="text-xs text-muted-foreground mb-2">Connection Type</p>
