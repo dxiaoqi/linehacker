@@ -21,12 +21,12 @@ const nodeIcons: Record<NodeType, typeof Target> = {
 }
 
 const nodeColors: Record<NodeType, string> = {
-  base: "border-l-[var(--node-base)] bg-[var(--node-base)]/5",
-  goal: "border-l-[var(--node-goal)] bg-[var(--node-goal)]/5",
-  idea: "border-l-[var(--node-idea)] bg-[var(--node-idea)]/5",
-  action: "border-l-[var(--node-action)] bg-[var(--node-action)]/5",
-  risk: "border-l-[var(--node-risk)] bg-[var(--node-risk)]/5",
-  resource: "border-l-[var(--node-resource)] bg-[var(--node-resource)]/5",
+  base: "border-border hover:border-[var(--node-base)]",
+  goal: "border-border hover:border-[var(--node-goal)]",
+  idea: "border-border hover:border-[var(--node-idea)]",
+  action: "border-border hover:border-[var(--node-action)]",
+  risk: "border-border hover:border-[var(--node-risk)]",
+  resource: "border-border hover:border-[var(--node-resource)]",
 }
 
 const nodeIconColors: Record<NodeType, string> = {
@@ -109,9 +109,9 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps<CanvasNodeData>) 
     <TooltipProvider>
       <div
         className={cn(
-          "min-w-[240px] max-w-[320px] rounded-lg border border-l-4 bg-card shadow-md transition-all",
+          "min-w-[240px] max-w-[320px] rounded-xl border bg-card shadow-sm transition-all duration-300 hover:shadow-md",
           nodeColors[data.type],
-          selected && "ring-2 ring-primary shadow-lg",
+          selected && "ring-2 ring-primary shadow-lg ring-offset-2 ring-offset-canvas-bg",
           isHighlighted && "animate-pulse ring-4 ring-primary/50 shadow-xl shadow-primary/20",
         )}
         onDoubleClick={handleDoubleClick}
@@ -122,12 +122,17 @@ function CanvasNodeComponent({ id, data, selected }: NodeProps<CanvasNodeData>) 
 
         <div className="p-3">
           {/* Header with icon, title, and comment button */}
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className={cn("p-1.5 rounded-md bg-background shrink-0", nodeIconColors[data.type])}>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div
+                className={cn(
+                  "p-2 rounded-lg shrink-0 transition-colors",
+                  nodeIconColors[data.type].replace("text-", "bg-").replace("]", "]/15") + " " + nodeIconColors[data.type],
+                )}
+              >
                 <Icon className="w-4 h-4" />
               </div>
-              <h3 className="font-medium text-sm truncate text-card-foreground">{data.title || "Untitled"}</h3>
+              <h3 className="font-semibold text-sm truncate text-foreground">{data.title || "Untitled"}</h3>
             </div>
             <div className="flex items-center shrink-0">
               <Tooltip>

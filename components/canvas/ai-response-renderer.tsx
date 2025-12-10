@@ -455,7 +455,7 @@ function ActionsRenderer({
       case "delete":
         return `删除节点 ${action.nodeId}: ${action.reason}`
       case "create-group":
-        return `创建分组: "${action.title}"`
+        return `创建分组: "${(action as any).groupTitle || action.title || "新分组"}"`
       case "add-section":
         return `在节点 ${action.nodeId} 添加章节: "${action.sectionTitle}"`
       case "update-section":

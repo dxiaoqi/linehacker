@@ -178,6 +178,12 @@ export interface CanvasComment {
   content: string
   timestamp: string
   isRead: boolean
+  // New: support multiple actions with collective status
+  actions?: {
+    actions: AIAction[]
+    status: "pending" | "approved" | "rejected"
+  }
+  // Legacy: single suggestion (for backward compatibility)
   suggestion?: {
     type: "modify" | "create" | "delete" | "connect"
     action: AIAction
@@ -188,6 +194,8 @@ export interface CanvasComment {
     author: "user" | "ai"
     content: string
     timestamp: string
+    mentions?: string[] // Array of mentioned entities like "AI"
+    parentReplyId?: string // For nested replies
   }[]
 }
 

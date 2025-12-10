@@ -653,8 +653,8 @@ export function CanvasToolbar() {
                 ref={popoverRef}
                 className={cn(
                   "absolute bottom-full mb-6 left-1/2 -translate-x-1/2 w-[320px] sm:w-[400px]",
-                  "bg-background border rounded-lg shadow-lg p-4 max-h-[60vh] overflow-y-auto",
-                  (currentResponse?.status === "pending" || isLoading) && "ring-2 ring-primary",
+                  "bg-card border rounded-xl shadow-xl p-5 max-h-[60vh] overflow-y-auto backdrop-blur-sm",
+                  (currentResponse?.status === "pending" || isLoading) && "ring-2 ring-primary shadow-primary/10",
                 )}
               >
                 {currentResponse?.status === "pending" && !isLoading && (

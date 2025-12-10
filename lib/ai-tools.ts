@@ -138,18 +138,22 @@ export function executeAIAction(action: AIAction): AIActionResult {
 
     case "create-group": {
       const position = action.position || getViewportCenter()
-      const groupId = store.addGroup(position)
+      const size = (action as any).size
+      
+      // Create group with size if provided
+      const groupId = store.addGroup(position, size)
 
-      if (action.title) {
-        store.updateGroupData(groupId, { title: action.title })
-      }
+      // Support both "groupTitle" (from AI) and "title" (legacy)
+      const groupTitle = (action as any).groupTitle || action.title || "New Section"
+      store.updateGroupData(groupId, { title: groupTitle })
+      
       if (action.color) {
         store.updateGroupData(groupId, { color: action.color })
       }
 
       return {
         success: true,
-        message: `Created group: "${action.title}"`,
+        message: `Created group: "${groupTitle}"`,
         nodeId: groupId,
       }
     }
@@ -236,7 +240,7 @@ export function executeAIAction(action: AIAction): AIActionResult {
       // Find the newly created edge and update its weight and label
       const edges = useCanvasStore.getState().edges
       const newEdge = edges.find((e) => e.source === sourceNode!.id && e.target === targetNode!.id)
-      
+
       if (newEdge) {
         store.updateEdgeWeight(newEdge.id, action.weight as ConnectionWeight)
         if (action.label) {
@@ -417,13 +421,13 @@ export function buildCanvasContext() {
       const sourceNode = store.nodes.find((n) => n.id === e.source)
       const targetNode = store.nodes.find((n) => n.id === e.target)
       return {
-        id: e.id,
-        source: e.source,
-        target: e.target,
+      id: e.id,
+      source: e.source,
+      target: e.target,
         sourceTitle: sourceNode?.data.title || "",
         targetTitle: targetNode?.data.title || "",
-        weight: e.data?.weight || "weak",
-        label: e.data?.label,
+      weight: e.data?.weight || "weak",
+      label: e.data?.label,
       }
     }),
     groups: store.nodes

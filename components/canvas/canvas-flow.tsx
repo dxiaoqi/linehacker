@@ -165,8 +165,8 @@ export function CanvasFlow() {
         return
       }
       if (isCreatingGroup) return
-      setSelectedNode(null)
-      setSelectedEdge(null)
+    setSelectedNode(null)
+    setSelectedEdge(null)
     },
     [setSelectedNode, setSelectedEdge, isCreatingGroup, groupDragStart],
   )
