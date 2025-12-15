@@ -4,7 +4,7 @@ import type React from "react"
 
 import { memo, useCallback, useState, useRef, useEffect } from "react"
 import { Handle, Position, type NodeProps } from "@xyflow/react"
-import { Target, Lightbulb, Zap, AlertTriangle, Package, Square, MessageSquare } from "lucide-react"
+import { Target, Lightbulb, Zap, AlertTriangle, Package, Square, MessageSquare, FileQuestion, Users, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -18,6 +18,9 @@ const nodeIcons: Record<NodeType, typeof Target> = {
   action: Zap,
   risk: AlertTriangle,
   resource: Package,
+  placeholder: FileQuestion,
+  stakeholder: Users,
+  boundary: Shield,
 }
 
 const nodeColors: Record<NodeType, string> = {
@@ -27,6 +30,9 @@ const nodeColors: Record<NodeType, string> = {
   action: "border-border hover:border-[var(--node-action)]",
   risk: "border-border hover:border-[var(--node-risk)]",
   resource: "border-border hover:border-[var(--node-resource)]",
+  placeholder: "border-border hover:border-[var(--node-placeholder)]",
+  stakeholder: "border-border hover:border-[var(--node-stakeholder)]",
+  boundary: "border-border hover:border-[var(--node-boundary)]",
 }
 
 const nodeIconColors: Record<NodeType, string> = {
@@ -36,6 +42,9 @@ const nodeIconColors: Record<NodeType, string> = {
   action: "text-[var(--node-action)]",
   risk: "text-[var(--node-risk)]",
   resource: "text-[var(--node-resource)]",
+  placeholder: "text-[var(--node-placeholder)]",
+  stakeholder: "text-[var(--node-stakeholder)]",
+  boundary: "text-[var(--node-boundary)]",
 }
 
 function CanvasNodeComponent({ id, data, selected }: NodeProps<CanvasNodeData>) {

@@ -1,32 +1,60 @@
-# LineHacker
+# AI Canvas Builder
 
-An infinite canvas application for AI-assisted workflow planning and visualization built with React Flow, Next.js, and shadcn/ui.
+An infinite canvas application for AI-assisted workflow planning and visualization built with React Flow, Next.js, and shadcn/ui. **Now enhanced with Systems Thinking principles!**
+
+## ✨ New Features (v1.0.0)
+
+- **🧠 Systems Thinking AI**: 5 core thinking principles integrated into AI responses
+  - Clarifies core purpose vs. branch objectives
+  - Analyzes underlying logic and structure
+  - Applies systems perspective based on user context
+  - Promotes iterative mindset with feedback loops
+  - Identifies key elements: risks, resources, stakeholders, boundaries, data needs
+- **📋 New Node Types**: 
+  - **Placeholder** (Data occupancy) - for data that needs to be collected
+  - **Stakeholder** (Third-party roles) - for external partners and approvers
+  - **Boundary** (Constraints) - for limits and rules
+- **🔍 Process Analysis Tool**: Automatic flow completeness scoring (0-100)
+- **📝 Enhanced AI Forms**: Guided questions to clarify intent
+- **🔄 Iteration Templates**: 4 pre-built templates (Product Launch, Problem Solving, Learning, Optimization)
+
+[📖 Read the full Systems Thinking Guide](./SYSTEMS_THINKING_GUIDE.md)
 
 ## Features
 
 - **Infinite 2D Canvas**: Unlimited workspace with zoom (10%-500%) and pan support
-- **Node-Based System**: 5 types of nodes (Goal, Idea, Action, Risk, Resource)
-- **AI Integration**: AI-powered analysis and suggestions for your workflow
-- **Connection System**: Visual relationships between nodes with different connection types
+- **Node-Based System**: 9 types of nodes (Goal, Idea, Action, Risk, Resource, Placeholder, Stakeholder, Boundary, Base)
+- **AI Integration**: AI-powered analysis with systems thinking and iterative workflow generation
+- **Connection System**: Visual relationships between nodes with labels and different connection types
 - **Structured Editing**: Detailed node editing with sections, items, and metadata
+- **Process Analysis**: Automatic detection of missing elements (risks, resources, feedback loops)
 - **Methodology Rules**: Configure custom AI assistance rules in Markdown format
 
 ## Node Types
 
-### Goal Node (Purple)
+### Goal Node (Blue)
 Represents objectives and targets with deadline, budget, and priority tracking.
 
 ### Idea Node (Yellow)
 Captures concepts and possibilities with category and feasibility assessment.
 
-### Action Node (Blue)
+### Action Node (Green)
 Defines tasks and activities with status, assignee, and effort estimation.
 
 ### Risk Node (Red)
 Identifies potential problems with probability, impact, and mitigation strategies.
 
-### Resource Node (Green)
+### Resource Node (Purple)
 Tracks assets and materials with quantity and availability status.
+
+### Placeholder Node (Slate Gray) 🆕
+Marks data or information that needs to be collected/prepared by the user. Must include "How to Prepare" instructions.
+
+### Stakeholder Node (Cyan) 🆕
+Identifies third-party roles, external partners, or other actors involved in the process.
+
+### Boundary Node (Orange) 🆕
+Defines constraints, limits, rules, and boundary conditions that cannot be breached.
 
 ## Connection Types
 
@@ -91,31 +119,70 @@ Connections between nodes represent relationships and dependencies. All connecti
 
 ### AI Features
 
-1. **Bottom Toolbar**: Type questions or commands in the AI input
-2. **Node Analysis**: Click the AI button on any node to get specific analysis
-3. **Suggestions**: AI can suggest modifications, new connections, or node creation
-4. **Approve/Reject**: Review and approve or reject AI suggestions
-5. **Methodology**: Configure global AI rules via the Settings button
+1. **Smart Questioning**: AI asks targeted questions to clarify your core purpose and constraints
+2. **Systems Thinking**: AI automatically identifies risks, resources, stakeholders, and boundaries
+3. **Iteration Templates**: Pre-built workflow structures for common scenarios (Product Launch, Problem Solving, Learning, Optimization)
+4. **Process Analysis**: Get a completeness score (0-100) with specific improvement suggestions
+5. **Bottom Toolbar**: Type questions or commands in the AI input
+6. **Node Analysis**: Click the AI button on any node to get specific analysis
+7. **Suggestions**: AI can suggest modifications, new connections, or node creation
+8. **Approve/Reject**: Review and approve or reject AI suggestions
+9. **Methodology**: Configure global AI rules via the Settings button
+
+**Example AI Interaction**:
+```
+User: "I want to launch an online course"
+
+AI: (Shows form)
+  Step 1: "What is your ONE core outcome?"
+    → [ ] Generate $10k revenue in 3 months
+    → [ ] Build personal brand
+    → [ ] Help 100 students
+    → [ ] Other: ___
+  
+  Step 2: "Secondary priorities?" (multi-select)
+    → [x] Speed/Fast results
+    → [x] Low cost
+    → [ ] Quality/Excellence
+    → [ ] Learning/Skill building
+
+AI generates: 5-phase iterative workflow with
+  - Goal node: "Core: $10k in 3 months"
+  - Placeholder: "Data: Target student pain points" + how to collect
+  - Risk nodes: "No initial audience", "Content quality"
+  - Resource nodes: "Course platform ($39/mo)", "Video equipment"
+  - Stakeholder: "Beta students (first 10)"
+  - Boundary: "$2k budget limit"
+  - Feedback loop: from "Test & Validate" back to "Design & Plan"
+```
+
+See [SYSTEMS_THINKING_GUIDE.md](./SYSTEMS_THINKING_GUIDE.md) for detailed examples.
 
 ## Project Structure
 
 \`\`\`
 ├── app/                    # Next.js app directory
+│   └── api/
+│       └── canvas-ai/
+│           ├── route.ts            # Main AI endpoint (enhanced with Systems Thinking)
+│           └── analyze-process/    # Process analysis endpoint
 ├── components/
 │   └── canvas/            # Canvas-related components
 │       ├── canvas-flow.tsx        # Main React Flow canvas
-│       ├── canvas-node.tsx        # Custom node component
+│       ├── canvas-node.tsx        # Custom node component (supports 9 types)
 │       ├── canvas-edge.tsx        # Custom edge/connection component
 │       ├── canvas-toolbar.tsx     # Bottom toolbar with AI input
 │       ├── node-edit-panel.tsx    # Right sidebar for node editing
 │       ├── ai-sidebar.tsx         # AI analysis sidebar
 │       └── ...
 ├── lib/
+│   ├── process-analyzer.ts        # 🆕 Process completeness analysis tool
 │   ├── store/             # Zustand state management
 │   │   └── canvas-store.ts
 │   ├── types/             # TypeScript type definitions
 │   │   └── canvas.ts
 │   └── utils.ts           # Utility functions
+├── SYSTEMS_THINKING_GUIDE.md      # 🆕 Detailed guide for new features
 └── README.md              # This file
 \`\`\`
 

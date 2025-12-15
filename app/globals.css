@@ -51,6 +51,9 @@
   --node-risk: oklch(0.65 0.2 25);
   --node-resource: oklch(0.6 0.15 290);
   --node-base: oklch(0.5 0 0);
+  --node-placeholder: oklch(0.58 0.05 250);
+  --node-stakeholder: oklch(0.6 0.18 195);
+  --node-boundary: oklch(0.65 0.18 35);
 
   /* Canvas specific */
   --canvas-bg: oklch(0.96 0 0);
@@ -99,6 +102,9 @@
   --node-risk: oklch(0.6 0.25 25);
   --node-resource: oklch(0.65 0.18 290);
   --node-base: oklch(0.6 0 0);
+  --node-placeholder: oklch(0.65 0.08 250);
+  --node-stakeholder: oklch(0.65 0.2 195);
+  --node-boundary: oklch(0.65 0.2 35);
 
   /* Canvas specific - dark mode */
   --canvas-bg: oklch(0.12 0.01 260);
@@ -151,6 +157,9 @@
   --color-node-risk: var(--node-risk);
   --color-node-resource: var(--node-resource);
   --color-node-base: var(--node-base);
+  --color-node-placeholder: var(--node-placeholder);
+  --color-node-stakeholder: var(--node-stakeholder);
+  --color-node-boundary: var(--node-boundary);
   --color-canvas-bg: var(--canvas-bg);
   --color-canvas-grid: var(--canvas-grid);
   --color-canvas-selection: var(--canvas-selection);

@@ -5,7 +5,7 @@ import { applyLayout } from "@/lib/layout-engine"
 // AI Action Types
 export interface AICreateAction {
   type: "create"
-  nodeType: "base" | "goal" | "idea" | "action" | "risk" | "resource"
+  nodeType: "base" | "goal" | "idea" | "action" | "risk" | "resource" | "placeholder" | "stakeholder" | "boundary"
   title: string
   description?: string
   sections?: { title: string; items: string[] }[]

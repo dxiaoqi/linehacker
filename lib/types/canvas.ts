@@ -1,6 +1,6 @@
 import type { Node, Edge } from "@xyflow/react"
 
-export type NodeType = "base" | "goal" | "idea" | "action" | "risk" | "resource" | "group"
+export type NodeType = "base" | "goal" | "idea" | "action" | "risk" | "resource" | "group" | "placeholder" | "stakeholder" | "boundary"
 
 export interface NodeField {
   value: string | number | boolean
@@ -166,6 +166,24 @@ export const NODE_TYPE_CONFIG: Record<NodeType, { label: string; color: string; 
     color: "#6366f1",
     icon: "Frame",
     description: "Container for organizing nodes",
+  },
+  placeholder: {
+    label: "Data Placeholder",
+    color: "#94a3b8",
+    icon: "FileQuestion",
+    description: "Placeholder for data that needs to be collected",
+  },
+  stakeholder: {
+    label: "Stakeholder",
+    color: "#06b6d4",
+    icon: "Users",
+    description: "Third-party roles and stakeholders",
+  },
+  boundary: {
+    label: "Boundary",
+    color: "#f97316",
+    icon: "Shield",
+    description: "Constraints and boundary conditions",
   },
 }
 
