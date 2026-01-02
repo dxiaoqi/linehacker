@@ -107,7 +107,6 @@ export function CommentPanel() {
     updateCommentSuggestionStatus,
     markCommentAsRead,
     setSelectedNode,
-    aiSettings,
   } = useCanvasStore()
 
   const { setCenter, getNode } = useReactFlow()
@@ -119,6 +118,7 @@ export function CommentPanel() {
   const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null)
   const [isAIResponding, setIsAIResponding] = useState(false)
   const [aiRespondingToComment, setAiRespondingToComment] = useState<string | null>(null)
+  const [executingActionsForComment, setExecutingActionsForComment] = useState<string | null>(null)
   
   // Mention state
   const [showMentionPanel, setShowMentionPanel] = useState(false)
@@ -611,14 +611,22 @@ export function CommentPanel() {
   const handleApproveActions = async (comment: CanvasComment) => {
     if (!comment.actions) return
     
+    setExecutingActionsForComment(comment.id)
+    
     try {
       // Type assertion needed due to different AIAction type definitions
       const results = await executeAIActions(comment.actions.actions as any)
+      
       if (results.every(r => r.success)) {
+        updateCommentActionsStatus(comment.id, "approved")
+      } else {
+        // Some actions failed, still mark as approved
         updateCommentActionsStatus(comment.id, "approved")
       }
     } catch (error) {
       console.error("Failed to execute actions:", error)
+    } finally {
+      setExecutingActionsForComment(null)
     }
   }
 
@@ -808,24 +816,35 @@ export function CommentPanel() {
                     {/* Approve/Reject buttons for AI messages with pending actions */}
                     {comment.author === "ai" && comment.actions && comment.actions.status === "pending" && (
                       <div className="absolute top-2 right-2 flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-600/10"
-                          onClick={() => handleApproveActions(comment)}
-                          title="Approve actions"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-600/10"
-                          onClick={() => handleRejectActions(comment)}
-                          title="Reject actions"
-                        >
-                          <XIcon className="h-3.5 w-3.5" />
-                        </Button>
+                        {executingActionsForComment === comment.id ? (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span>Executing {comment.actions.actions.length} actions...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-600/10"
+                              onClick={() => handleApproveActions(comment)}
+                              title="Approve actions"
+                              disabled={executingActionsForComment !== null}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-600/10"
+                              onClick={() => handleRejectActions(comment)}
+                              title="Reject actions"
+                              disabled={executingActionsForComment !== null}
+                            >
+                              <XIcon className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     )}
 

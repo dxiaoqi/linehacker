@@ -50,6 +50,10 @@ export function CanvasToolbar() {
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [lastPrompt, setLastPrompt] = useState("")
+  const [lastRequest, setLastRequest] = useState<{
+    endpoint: string
+    payload: any
+  } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
 
@@ -62,8 +66,6 @@ export function CanvasToolbar() {
     selectedNodeId,
     isEditMode,
     toggleEditMode,
-    aiSettings,
-    updateAISettings,
     setCommentPanelOpen,
     addComment,
     isCreatingGroup,
@@ -143,23 +145,42 @@ export function CanvasToolbar() {
         selectedNodeId: selectedNodeId || undefined,
       }
 
+      const requestPayload = {
+        prompt: userInput,
+        methodology: methodologyString,
+        canvasContext,
+      }
+
+      // Save request for retry
+      setLastRequest({ endpoint: "/api/canvas-ai", payload: requestPayload })
+
       const res = await fetch("/api/canvas-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: userInput,
-          methodology: methodologyString,
-          aiSettings,
-          canvasContext,
-        }),
+        body: JSON.stringify(requestPayload),
       })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`)
+      }
 
       const data = await res.json()
 
       if (data.error) {
         setCurrentResponse({
           id: `response-${Date.now()}`,
-          contents: [{ type: "text", text: data.message || "An error occurred" }],
+          contents: [
+            {
+              type: "error",
+              message: "Failed to get AI response",
+              error: {
+                message: data.message || data.error || "An error occurred",
+                code: data.code,
+              },
+              retryable: true,
+            },
+          ],
           requiresConfirmation: false,
           status: "completed",
         })
@@ -237,9 +258,19 @@ export function CanvasToolbar() {
       }
     } catch (error) {
       console.error("[v0] AI request failed:", error)
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
       setCurrentResponse({
         id: `error-${Date.now()}`,
-        contents: [{ type: "text", text: "Failed to connect to AI service. Please check your settings." }],
+        contents: [
+          {
+            type: "error",
+            message: "Failed to connect to AI service",
+            error: {
+              message: errorMessage,
+            },
+            retryable: true,
+          },
+        ],
         requiresConfirmation: false,
         status: "completed",
       })
@@ -364,7 +395,6 @@ export function CanvasToolbar() {
             prompt: nextPrompt,
             formData: nextFormData,
             methodology: methodologyString,
-            aiSettings,
             canvasContext,
           }),
         })
@@ -455,9 +485,19 @@ export function CanvasToolbar() {
         }
       } catch (error) {
         console.error("[v0] AI request failed:", error)
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
         setCurrentResponse({
           id: `error-${Date.now()}`,
-          contents: [{ type: "text", text: "Failed to connect to AI service. Please check your settings." }],
+          contents: [
+            {
+              type: "error",
+              message: "Failed to process form submission",
+              error: {
+                message: errorMessage,
+              },
+              retryable: true,
+            },
+          ],
           requiresConfirmation: false,
           status: "completed",
         })
@@ -466,7 +506,7 @@ export function CanvasToolbar() {
         setIsLoading(false)
       }
     },
-    [currentResponse, lastPrompt, nodes, edges, selectedNodeId, methodology, aiSettings],
+    [currentResponse, lastPrompt, nodes, edges, selectedNodeId, methodologyString],
   )
 
   const handleCancel = useCallback(() => {
@@ -480,6 +520,137 @@ export function CanvasToolbar() {
     setShowResponse(false)
     setCurrentResponse(null)
   }, [currentResponse])
+
+  const handleRetry = useCallback(async () => {
+    if (!lastRequest) return
+
+    setIsLoading(true)
+    setShowResponse(false)
+    setCurrentResponse(null)
+
+    try {
+      const res = await fetch(lastRequest.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastRequest.payload),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`)
+      }
+
+      const data = await res.json()
+
+      if (data.error) {
+        setCurrentResponse({
+          id: `response-${Date.now()}`,
+          contents: [
+            {
+              type: "error",
+              message: "Failed to get AI response",
+              error: {
+                message: data.message || data.error || "An error occurred",
+                code: data.code,
+              },
+              retryable: true,
+            },
+          ],
+          requiresConfirmation: false,
+          status: "completed",
+        })
+        setShowResponse(true)
+        return
+      }
+
+      const contents: AIContent[] = []
+
+      if (data.type === "form" && (data.form || data.steps)) {
+        contents.push({
+          type: "form",
+          title: data.title || data.form?.title,
+          description: data.description || data.form?.description,
+          steps: data.steps || data.form?.steps,
+          submitLabel: "Submit",
+          cancelLabel: "Cancel",
+        })
+      } else if (data.type === "actions" && data.requiresConfirmation && data.actions && data.actions.length > 0) {
+        contents.push({
+          type: "actions",
+          message: `${data.actions.length} action(s) pending your approval`,
+          actions: [
+            { id: "approve", label: "Approve", variant: "approve" },
+            { id: "reject", label: "Reject", variant: "reject" },
+          ],
+        })
+      } else {
+        if (data.message) {
+          if (
+            data.type === "markdown" ||
+            data.message.includes("**") ||
+            data.message.includes("##") ||
+            data.message.includes("- ")
+          ) {
+            contents.push({ type: "markdown", markdown: data.message })
+          } else {
+            contents.push({ type: "text", text: data.message })
+          }
+        }
+
+        if (data.followUpQuestions && data.followUpQuestions.length > 0) {
+          contents.push({
+            type: "choice",
+            question: "Would you like to:",
+            options: data.followUpQuestions.map((q: string, i: number) => ({
+              label: q,
+              value: `followup-${i}`,
+            })),
+            allowCustom: true,
+          })
+        }
+      }
+
+      const isFormResponse = data.type === "form"
+      const isActionResponse = data.type === "actions" && data.requiresConfirmation
+
+      const response: AIInteractiveResponse = {
+        id: `response-${Date.now()}`,
+        contents,
+        actions: data.actions || [],
+        requiresConfirmation: isActionResponse,
+        status: isActionResponse ? "pending" : isFormResponse ? "pending" : "completed",
+        timestamp: new Date(),
+      }
+
+      setCurrentResponse(response)
+      setShowResponse(true)
+
+      if (!isActionResponse && !isFormResponse) {
+        setHistory((prev) => [{ ...response, userInput: "Retried" }, ...prev])
+      }
+    } catch (error) {
+      console.error("[v0] Retry failed:", error)
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
+      setCurrentResponse({
+        id: `error-${Date.now()}`,
+        contents: [
+          {
+            type: "error",
+            message: "Retry failed. Please check your connection.",
+            error: {
+              message: errorMessage,
+            },
+            retryable: true,
+          },
+        ],
+        requiresConfirmation: false,
+        status: "completed",
+      })
+      setShowResponse(true)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [lastRequest])
 
   const handleClosePopup = useCallback(() => {
     if (currentResponse) {
@@ -520,7 +691,6 @@ export function CanvasToolbar() {
           prompt:
             "Please analyze the current canvas and provide suggestions for improvement. Look for missing connections, suggest new nodes, and identify potential issues.",
           methodology: methodologyString,
-          aiSettings,
           canvasContext,
         }),
       })
@@ -538,9 +708,19 @@ export function CanvasToolbar() {
       }
     } catch (error) {
       console.error("[v0] Suggestions request failed:", error)
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
       setCurrentResponse({
         id: `error-${Date.now()}`,
-        contents: [{ type: "text", text: "Failed to get suggestions. Please try again." }],
+        contents: [
+          {
+            type: "error",
+            message: "Failed to get suggestions",
+            error: {
+              message: errorMessage,
+            },
+            retryable: true,
+          },
+        ],
         requiresConfirmation: false,
         status: "completed",
       })
@@ -671,6 +851,7 @@ export function CanvasToolbar() {
                   onAction={handleAction}
                   onSubmit={handleFormSubmit}
                   onCancel={handleCancel}
+                  onRetry={handleRetry}
                 />
 
                 {/* Close button - always visible */}

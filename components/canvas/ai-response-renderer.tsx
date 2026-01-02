@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Check, X, ChevronRight, ChevronLeft, ChevronDown, Plus, Trash2, Link2, Edit, FileText } from "lucide-react"
+import { Check, X, ChevronRight, ChevronLeft, ChevronDown, Plus, Trash2, Link2, Edit, FileText, AlertCircle, RotateCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type {
@@ -22,6 +22,7 @@ import type {
   AIMultiChoiceContent,
   AIInputContent,
   AISelectContent,
+  AIErrorContent,
   AIFormField,
 } from "@/lib/types/ai-response"
 import type { AIAction } from "@/lib/ai-tools"
@@ -33,6 +34,7 @@ interface AIResponseRendererProps {
   onAction?: (actionId: string, data?: Record<string, unknown>) => void
   onSubmit?: (data: Record<string, unknown>) => void
   onCancel?: () => void
+  onRetry?: () => void
 }
 
 function TextRenderer({ content }: { content: AITextContent }) {
@@ -817,6 +819,55 @@ function SelectRenderer({
   )
 }
 
+function ErrorRenderer({
+  content,
+  onRetry,
+}: {
+  content: AIErrorContent
+  onRetry?: () => void
+}) {
+  return (
+    <div className="rounded-lg border-2 border-destructive/50 bg-destructive/5 p-4 space-y-3">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0">
+          <AlertCircle className="h-5 w-5 text-destructive" />
+        </div>
+        <div className="flex-1 space-y-1">
+          <p className="text-sm font-medium text-destructive">{content.message}</p>
+          {content.error && (
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <p>{content.error.message}</p>
+              {content.error.code && (
+                <p className="font-mono">Error Code: {content.error.code}</p>
+              )}
+              {content.error.statusCode && (
+                <p>Status: {content.error.statusCode}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {content.retryable && onRetry && (
+        <div className="flex items-center gap-2 pt-2 border-t border-destructive/20">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onRetry}
+            className="h-8 gap-2 border-destructive/30 text-destructive hover:bg-destructive/10"
+          >
+            <RotateCw className="h-3.5 w-3.5" />
+            Retry Request
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Click to try again
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Loading component with breathing animation
 function LoadingIndicator() {
   return (
@@ -864,6 +915,7 @@ export function AIResponseRenderer({
   onAction,
   onSubmit,
   onCancel,
+  onRetry,
 }: AIResponseRendererProps) {
   if (isLoading) {
     return <LoadingIndicator />
@@ -893,6 +945,8 @@ export function AIResponseRenderer({
             return <InputRenderer key={index} content={content} onSubmit={onSubmit} onCancel={onCancel} />
           case "select":
             return <SelectRenderer key={index} content={content} onSubmit={onSubmit} onCancel={onCancel} />
+          case "error":
+            return <ErrorRenderer key={index} content={content} onRetry={onRetry} />
           default:
             return null
         }

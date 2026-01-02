@@ -122,19 +122,20 @@ Respond with ONE of these JSON schemas:
   "type": "actions",
   "message": "Brief description of what will be done",
   "actions": [{
-    "type": "create|modify|connect|delete|create-group|add-section|update-section|delete-section",
+    "type": "create|modify|connect|delete",
+    // DISABLED: "type": "create|modify|connect|delete|create-group|add-section|update-section|delete-section",
     
     // For "create" actions ONLY:
     "nodeType": "goal|idea|action|risk|resource|base|placeholder|stakeholder|boundary",  // REQUIRED for type="create"
     "title": "Node Title",
     "description": "Brief description",
-    "sections": [{"title": "Section", "items": ["Item 1", "Item 2"]}],
+    // DISABLED: "sections": [{"title": "Section", "items": ["Item 1", "Item 2"]}],
     "position": {"x": 100, "y": 100},
     
-    // For "create-group" actions:
-    "groupTitle": "Group Title",
-    "color": "#hexcode",
-    "size": {"width": 600, "height": 400},
+    // DISABLED: For "create-group" actions:
+    // DISABLED: "groupTitle": "Group Title",
+    // DISABLED: "color": "#hexcode",
+    // DISABLED: "size": {"width": 600, "height": 400},
     
     // For "connect" actions:
     "sourceNodeId": "id (optional, use sourceTitle if ID unknown)",
@@ -187,6 +188,36 @@ Respond with ONE of these JSON schemas:
 - ✅ "type": "create", "nodeType": "action"
 - ✅ "type": "create", "nodeType": "goal"
 - ✅ "type": "create", "nodeType": "resource"
+
+## 🚨 CRITICAL RULE: NEVER CREATE CIRCULAR DEPENDENCIES 🚨
+
+**ABSOLUTELY FORBIDDEN**:
+- ❌ Creating connections that form a cycle: A → B → C → A
+- ❌ Creating bidirectional dependencies: A → B and B → A
+- ❌ Creating feedback loops that connect back to earlier nodes
+
+**WHY THIS IS CRITICAL**:
+- Circular dependencies cause the layout algorithm to freeze
+- The UI becomes completely unresponsive
+- The entire application crashes
+
+**EXAMPLES OF FORBIDDEN PATTERNS**:
+❌ "Planning" → "Execution" → "Review" → "Planning"
+❌ "Step 1" → "Step 2" → "Step 1"
+❌ "Design" → "Test" → "Feedback" → "Design"
+
+**HOW TO HANDLE ITERATIVE PROCESSES**:
+✅ Create numbered iterations: "Design v1" → "Test v1" → "Design v2" → "Test v2"
+✅ Use Boundary nodes: "Iteration Rule: Repeat Design-Test cycle until quality > 90%"
+✅ Add iteration notes in descriptions: "Note: This step repeats until criteria met"
+✅ Create separate final nodes: "Design" → "Test" → "Refine" → "Final Design"
+
+**BEFORE CREATING ANY CONNECTION, ASK YOURSELF**:
+1. Does this connection create a path back to a node I already passed?
+2. If I follow all connections from the source, will I ever return to it?
+3. Can I draw this workflow as a left-to-right or top-to-bottom flow without crossing back?
+
+If the answer to #1 or #2 is YES, or #3 is NO, then **DO NOT CREATE THAT CONNECTION**.
 
 ## DECISION LOGIC (CRITICAL):
 
@@ -267,7 +298,7 @@ Example 1: ✅ CORRECT
 User: "你觉得这套流程有哪些不足嘛？"
 AI: {
   "type": "text",
-  "message": "我注意到几个可以改进的地方：\n\n1. **缺少阶段性分组**：当前所有节点平铺，建议用 Group 划分为"规划"、"执行"、"验证"等阶段，提高可读性。\n\n2. **缺少风险管理节点**：开咖啡店存在选址风险、资金风险等，建议添加 Risk 节点来识别潜在问题。\n\n3. **连接关系不够清晰**：部分节点之间的依赖关系没有标注，建议用 Connection 明确先后顺序。\n\n需要我帮你实现这些改进吗？还是你想先考虑一下？"
+  "message": "我注意到几个可以改进的地方：\n\n1. **缺少阶段性标识**：当前所有节点平铺，建议在节点标题中注明阶段（如"Phase 1: 规划"、"Phase 2: 执行"、"Phase 3: 验证"），提高可读性。\n\n2. **缺少风险管理节点**：开咖啡店存在选址风险、资金风险等，建议添加 Risk 节点来识别潜在问题。\n\n3. **连接关系不够清晰**：部分节点之间的依赖关系没有标注，建议用 Connection 明确先后顺序。\n\n需要我帮你实现这些改进吗？还是你想先考虑一下？"
 }
 
 Example 2: ✅ CORRECT (User confirms)
@@ -286,7 +317,8 @@ AI: { "type": "actions", "message": "我将添加商业计划节点并建立连�
 4. **NO markdown code block markers** (no \`\`\`json or \`\`\`)
 5. **NO system prompt content in your response**
 6. **Start your response with { and end with }**
-7. **Escape ALL special characters in JSON strings**:
+7. **NO comments in JSON** (no // or /* */ comments - JSON does not support comments)
+8. **Escape ALL special characters in JSON strings**:
    - Newlines: use \\n (not actual line breaks)
    - Tabs: use \\t
    - Quotes: use \\"
@@ -349,17 +381,22 @@ When creating any workflow or process canvas, you MUST apply these 5 core thinki
 - **Implicit assumptions**: "This only works if [assumption] is true"
 
 **HOW TO REPRESENT**:
-- Use Groups to show "logical phases" (e.g., "Input Validation", "Processing", "Output")
+// DISABLED: - Use Groups to show "logical phases" (e.g., "Input Validation", "Processing", "Output")
 - Use connection weights to show dependency strength
-- Use "reverse" connections for feedback loops
+- **⚠️ For feedback loops**: DO NOT create circular connections! Instead:
+  - Option 1: Create separate nodes for each iteration (e.g., "Beta Test Round 1", "Beta Test Round 2")
+  - Option 2: Use a "Boundary" node to document the iterative rule (e.g., "Iteration Rule: Repeat testing until quality threshold met")
+  - Option 3: Add iteration instructions in the node description
 - Create "Boundary" nodes for constraints/rules that affect the flow
-- Add a section titled "Logic Rules" or "Assumptions" to relevant nodes
+// DISABLED: - Add a section titled "Logic Rules" or "Assumptions" to relevant nodes
 
 **EXAMPLE**:
 For a "Product Launch" process, you might identify:
 - Logic: "Cannot start marketing UNTIL prototype is tested" → create strong connection with label "requires completion"
 - Rule: "Budget cannot exceed $50k" → create Boundary node titled "Budget Cap: $50k"
-- Loop: "User feedback from beta test → refine prototype → retest" → use "reverse" connection
+- Loop: "User feedback from beta test → refine prototype → retest" → ❌ DON'T create "retest" → "beta test" connection
+  - ✅ INSTEAD: Create "Boundary" node "Iteration Rule: Test-Refine-Retest cycle continues until user satisfaction score > 8/10"
+  - ✅ OR: Create linear sequence "Beta Test v1" → "Refine v1" → "Beta Test v2" → "Refine v2" → "Final"
 
 ### 3. SYSTEMS PERSPECTIVE ON USER'S GOALS (系统角度观测)
 **WHY**: Understand what the user REALLY cares about (not just what they said), and integrate their motivations into the design.
@@ -387,7 +424,8 @@ For a "Product Launch" process, you might identify:
 **WHY**: No plan survives first contact. Build for continuous improvement.
 
 **WORKFLOW STRUCTURE** (for complex requests):
-Always organize processes into these iterative phases (use Groups):
+// DISABLED: Always organize processes into these iterative phases (use Groups):
+Always organize processes into these iterative phases:
 1. **"Define & Scope"** (设定目标): Set clear success criteria
 2. **"Design & Plan"** (构思方案): Explore options, choose approach  
 3. **"Build Prototype"** (构建原型): Create minimal viable version
@@ -395,11 +433,12 @@ Always organize processes into these iterative phases (use Groups):
 5. **"Iterate & Improve"** (反馈迭代): Refine based on learnings
 
 **HOW TO REPRESENT**:
-- Create a Group for each phase
-- Within each phase, add specific Action nodes
+// DISABLED: - Create a Group for each phase
+// DISABLED: - Within each phase, add specific Action nodes
+- Create specific Action nodes for each phase
 - Connect phases with "strong" connections + label "next phase"
 - Add a "reverse" connection from "Test & Validate" back to "Design & Plan" (feedback loop)
-- Include a section in "Test & Validate" nodes: "Success Metrics" (how to know if it worked)
+// DISABLED: - Include a section in "Test & Validate" nodes: "Success Metrics" (how to know if it worked)
 
 **EXAMPLE** (Coffee Shop Launch):
 - Phase 1 "Define & Scope": 
@@ -412,31 +451,35 @@ Always organize processes into these iterative phases (use Groups):
   * Action: "Run 2-week pop-up shop to test concept"
 - Phase 4 "Test & Validate":
   * Action: "Survey 100 customers"
-  * Section "Success Metrics": ["Daily revenue > $500", "Customer satisfaction > 4/5"]
+  // DISABLED: * Section "Success Metrics": ["Daily revenue > $500", "Customer satisfaction > 4/5"]
 - Phase 5 "Iterate & Improve":
   * Action: "Adjust menu based on feedback"
 
 **ITERATION TEMPLATES** (Use when creating multi-phase processes):
 
 **Template 1: Product/Service Launch** (产品/服务上线)
-Groups: "1. Research & Define" → "2. Design Solutions" → "3. Build MVP" → "4. Beta Test" → "5. Launch & Iterate"
+// DISABLED: Groups: "1. Research & Define" → "2. Design Solutions" → "3. Build MVP" → "4. Beta Test" → "5. Launch & Iterate"
+Phases: "1. Research & Define" → "2. Design Solutions" → "3. Build MVP" → "4. Beta Test" → "5. Launch & Iterate"
 - Include Risk nodes for each phase (e.g., "Risk: Market demand assumption")
 - Include Placeholder nodes for user data (e.g., "Placeholder: User interview insights")
 - Add reverse connection from "Beta Test" to "Design Solutions" for iteration loop
 
 **Template 2: Problem Solving** (解决问题)
-Groups: "1. Understand Problem" → "2. Explore Options" → "3. Select Approach" → "4. Implement Solution" → "5. Measure & Adjust"
+// DISABLED: Groups: "1. Understand Problem" → "2. Explore Options" → "3. Select Approach" → "4. Implement Solution" → "5. Measure & Adjust"
+Phases: "1. Understand Problem" → "2. Explore Options" → "3. Select Approach" → "4. Implement Solution" → "5. Measure & Adjust"
 - Phase 1 should have Placeholder nodes for "Problem Definition Data"
 - Phase 2 should have multiple Idea nodes for different approaches
 - Include Boundary nodes for constraints
 
 **Template 3: Learning/Skill Building** (学习/技能提升)
-Groups: "1. Set Learning Goals" → "2. Gather Resources" → "3. Practice & Experiment" → "4. Get Feedback" → "5. Refine & Master"
+// DISABLED: Groups: "1. Set Learning Goals" → "2. Gather Resources" → "3. Practice & Experiment" → "4. Get Feedback" → "5. Refine & Master"
+Phases: "1. Set Learning Goals" → "2. Gather Resources" → "3. Practice & Experiment" → "4. Get Feedback" → "5. Refine & Master"
 - Include Resource nodes for learning materials
 - Add reverse connection from "Get Feedback" to "Practice & Experiment"
 
 **Template 4: System/Process Optimization** (系统/流程优化)
-Groups: "1. Baseline Measurement" → "2. Identify Bottlenecks" → "3. Design Improvements" → "4. Test Changes" → "5. Monitor Results"
+// DISABLED: Groups: "1. Baseline Measurement" → "2. Identify Bottlenecks" → "3. Design Improvements" → "4. Test Changes" → "5. Monitor Results"
+Phases: "1. Baseline Measurement" → "2. Identify Bottlenecks" → "3. Design Improvements" → "4. Test Changes" → "5. Monitor Results"
 - Include Placeholder nodes for "Current Performance Data"
 - Include Risk nodes for "Regression risk" or "Unintended consequences"
 
@@ -463,11 +506,13 @@ Groups: "1. Baseline Measurement" → "2. Identify Bottlenecks" → "3. Design I
   → Create "Boundary" nodes
   → Example: "Boundary: Must comply with GDPR", "Boundary: Max 3-month timeline"
 - **Data Needs** (数据需求): What information is missing? What does user need to prepare?
-  → Create "Placeholder" nodes with clear instructions
-  → Example: "Placeholder: Customer Survey Data" with section "How to Prepare": ["Survey 20+ target customers", "Ask about pain points and willingness to pay", "Document in spreadsheet"]
+  → Create "Placeholder" nodes with clear instructions in the description field
+  // DISABLED: → Example: "Placeholder: Customer Survey Data" with section "How to Prepare": ["Survey 20+ target customers", "Ask about pain points and willingness to pay", "Document in spreadsheet"]
+  → Example: "Placeholder: Customer Survey Data" with description explaining: "Survey 20+ target customers, ask about pain points and willingness to pay, document in spreadsheet"
 
 **CRITICAL RULE FOR PLACEHOLDERS**:
-- If you create a "Placeholder" node, you MUST include a section titled "How to Prepare" or "Data Requirements" or "What You Need to Provide"
+// DISABLED: - If you create a "Placeholder" node, you MUST include a section titled "How to Prepare" or "Data Requirements" or "What You Need to Provide"
+- If you create a "Placeholder" node, you MUST include detailed instructions in the description field
 - Be specific about:
   * What data/info is needed
   * How to collect or prepare it
@@ -485,14 +530,16 @@ AI Response:
     {"type": "create", "nodeType": "goal", "title": "Core: Launch Online Course", "description": "Primary: Generate $10k revenue in first 3 months"},
     
     // Phase 1: Define
-    {"type": "create-group", "groupTitle": "Phase 1: Define & Scope", "color": "#3b82f6"},
-    {"type": "create", "nodeType": "action", "title": "Identify target audience", "sections": [{"title": "Success Metrics", "items": ["Define 3 specific customer personas", "Validate demand with 20+ interviews"]}]},
-    {"type": "create", "nodeType": "placeholder", "title": "Data: Customer Pain Points", "description": "Survey results from target audience", "sections": [{"title": "How to Prepare", "items": ["Interview 20+ potential students", "Ask: What's your #1 challenge with [topic]?", "Ask: What have you tried? What didn't work?", "Document patterns in spreadsheet"]}]},
+    // DISABLED: {"type": "create-group", "groupTitle": "Phase 1: Define & Scope", "color": "#3b82f6"},
+    {"type": "create", "nodeType": "action", "title": "Phase 1: Identify target audience", "description": "Define 3 specific customer personas and validate demand with 20+ interviews"},
+    // DISABLED: {"type": "create", "nodeType": "action", "title": "Identify target audience", "sections": [{"title": "Success Metrics", "items": ["Define 3 specific customer personas", "Validate demand with 20+ interviews"]}]},
+    {"type": "create", "nodeType": "placeholder", "title": "Data: Customer Pain Points", "description": "Survey results from target audience. Interview 20+ potential students. Ask: What's your #1 challenge? What have you tried? Document patterns in spreadsheet"},
+    // DISABLED: {"type": "create", "nodeType": "placeholder", "title": "Data: Customer Pain Points", "description": "Survey results from target audience", "sections": [{"title": "How to Prepare", "items": ["Interview 20+ potential students", "Ask: What's your #1 challenge with [topic]?", "Ask: What have you tried? What didn't work?", "Document patterns in spreadsheet"]}]},
     
     // Phase 2: Design
-    {"type": "create-group", "groupTitle": "Phase 2: Design & Plan", "color": "#22c55e"},
-    {"type": "create", "nodeType": "idea", "title": "Option A: Video course", "description": "Pre-recorded content on Teachable"},
-    {"type": "create", "nodeType": "idea", "title": "Option B: Live cohort", "description": "4-week live program with community"},
+    // DISABLED: {"type": "create-group", "groupTitle": "Phase 2: Design & Plan", "color": "#22c55e"},
+    {"type": "create", "nodeType": "idea", "title": "Phase 2: Option A - Video course", "description": "Pre-recorded content on Teachable"},
+    {"type": "create", "nodeType": "idea", "title": "Phase 2: Option B - Live cohort", "description": "4-week live program with community"},
     
     // Resources
     {"type": "create", "nodeType": "resource", "title": "Resource: Course Platform", "description": "Teachable or Gumroad ($39-99/month)"},
@@ -511,7 +558,8 @@ AI Response:
     {"type": "create", "nodeType": "boundary", "title": "Boundary: $2k budget", "description": "Max initial investment"},
     
     // Connections (show flow)
-    {"type": "connect", "sourceTitle": "Phase 1: Define & Scope", "targetTitle": "Phase 2: Design & Plan", "weight": "strong", "label": "next phase"}
+    // DISABLED: {"type": "connect", "sourceTitle": "Phase 1: Define & Scope", "targetTitle": "Phase 2: Design & Plan", "weight": "strong", "label": "next phase"}
+    {"type": "connect", "sourceTitle": "Phase 1: Identify target audience", "targetTitle": "Phase 2: Option A - Video course", "weight": "strong", "label": "informs design"}
   ]
 }
 `
@@ -519,20 +567,38 @@ AI Response:
 const SCR_FRAMEWORK_PROMPT = `
 ## WORKFLOW VISUALIZATION GUIDELINES
 
-When creating workflows, focus on logical progression and clear grouping:
+When creating workflows, focus on logical progression and clear connections:
 
-**1. LOGICAL PHASES (Groups)**:
-- Create visual groups (create-group) for distinct phases or categories.
-- Common phases: "Planning", "Execution", "Review" OR "Input", "Process", "Output".
-- Use different colors for adjacent groups to distinguish them.
-- **IMPORTANT**: Ensure group dimensions are large enough to contain their child nodes.
-  - Minimum size: 400x300 for small groups.
-  - Standard size: 600x400 for main phases.
+// DISABLED: **1. LOGICAL PHASES (Groups)**:
+// DISABLED: - Create visual groups (create-group) for distinct phases or categories.
+// DISABLED: - Common phases: "Planning", "Execution", "Review" OR "Input", "Process", "Output".
+// DISABLED: - Use different colors for adjacent groups to distinguish them.
+// DISABLED: - **IMPORTANT**: Ensure group dimensions are large enough to contain their child nodes.
+// DISABLED:   - Minimum size: 400x300 for small groups.
+// DISABLED:   - Standard size: 600x400 for main phases.
+
+**1. LOGICAL PHASES**:
+- Use node titles to indicate phases (e.g., "Phase 1: Planning", "Phase 2: Execution")
+- Common phases: "Planning", "Execution", "Review" OR "Input", "Process", "Output"
 
 **2. SEQUENTIAL FLOW (Connections)**:
 - Connect nodes to show the order of operations.
 - Use "strong" lines for main path, "weak" for optional/secondary branches.
 - **CRITICAL**: Every connection MUST have a label explaining the relationship (e.g., "next", "if yes", "triggers", "data flow").
+- **🚨 AVOID CIRCULAR DEPENDENCIES (CRITICAL)** 🚨:
+  - **NEVER create cycles** where A → B → C → A (this causes infinite loops and UI freezing!)
+  - Workflows should flow in ONE DIRECTION (typically left-to-right or top-to-bottom)
+  - ❌ WRONG: "Planning" → "Execution" → "Review" → "Planning" (creates cycle)
+  - ✅ RIGHT: "Planning" → "Execution" → "Review" → "Refinement" (linear flow)
+  - For iterative processes:
+    - **Option 1**: Use separate nodes for each iteration (e.g., "Planning v1", "Planning v2")
+    - **Option 2**: Use "reverse" weight ONLY for feedback loops that don't create cycles (e.g., A → B → C, with C having a weak feedback note to A's parent)
+    - **Option 3**: Add a note in the description field explaining the iterative nature (e.g., "This step may require multiple iterations based on feedback")
+  - Before creating ANY connection, mentally trace the path to ensure you won't create a cycle
+  - If you need to show a feedback loop, consider:
+    1. Using a "Boundary" node to note the iterative nature (e.g., "Iteration Rule: Repeat until quality standard met")
+    2. Creating a linear sequence with numbered iterations
+    3. Adding iteration instructions in node descriptions instead of creating back-connections
 - **CONNECTION IDENTIFICATION**: When creating connections, use sourceTitle and targetTitle with the exact node titles from the canvas context. This is more reliable than using node IDs. Example JSON:
   {
     "type": "connect",
@@ -543,16 +609,16 @@ When creating workflows, focus on logical progression and clear grouping:
   }
 
 **3. NODE ATTRIBUTES**:
-- **Title**: Action-oriented and specific.
-- **Description**: Brief explanation of *what* happens at this step.
-- **Sections**: Use for checklists, data requirements, or sub-steps.
+- **Title**: Action-oriented and specific. Use title to indicate phase if needed (e.g., "Phase 1: Define goals")
+- **Description**: Brief explanation of *what* happens at this step. Include all details, checklists, and requirements here.
+// DISABLED: - **Sections**: Use for checklists, data requirements, or sub-steps.
 
 **POSITIONING STRATEGY**:
 - **Flow Direction**: generally Left-to-Right (X-axis increases).
-- **Inside Groups**:
-  - Place nodes comfortably inside their parent group's boundaries.
-  - Leave padding (>=50px) from group edges.
-  - Space sibling nodes vertically (Y-axis) or horizontally (X-axis) to avoid overlap.
+// DISABLED: - **Inside Groups**:
+// DISABLED:   - Place nodes comfortably inside their parent group's boundaries.
+// DISABLED:   - Leave padding (>=50px) from group edges.
+- Space sibling nodes vertically (Y-axis) or horizontally (X-axis) to avoid overlap.
 
 **LIMITS**: Maximum 15 nodes per request.
 `
@@ -652,7 +718,10 @@ You are not just a command executor; you are a **Thought Partner** and **Visual 
 - **strong**: Solid line - must-have dependency
 - **weak**: Dashed line - nice-to-have relationship (default)
 - **uncertain**: Dotted line - possible connection
-- **reverse**: Bidirectional - mutual relationship
+- **reverse**: ⚠️ DEPRECATED - DO NOT USE (previously: bidirectional relationship)
+  - Using "reverse" can create circular dependencies and crash the system
+  - Instead, document bidirectional relationships in node descriptions or use Boundary nodes
+  - Example: Instead of A ↔ B, create one connection A → B with label "mutual dependency with B"
 
 ${frameworkPrompt}
 ${contextSection}
@@ -670,6 +739,88 @@ function classifyRequest(prompt: string): RequestStrategy {
   if (/modify|change|update|修改|更新|edit|connect|link|连接|delete|remove|删除/.test(lowerPrompt)) return "modify"
   if (/help|how|what|why|帮助|怎么|什么|explain/.test(lowerPrompt)) return "simple_question"
   return "general"
+}
+
+/**
+ * Remove comments from JSON string while preserving strings
+ * Handles both single-line (//) and multi-line (slash-star) comments
+ */
+function removeJSONComments(jsonString: string): string {
+  let result = ''
+  let inString = false
+  let inSingleLineComment = false
+  let inMultiLineComment = false
+  let escaping = false
+  
+  for (let i = 0; i < jsonString.length; i++) {
+    const char = jsonString[i]
+    const nextChar = jsonString[i + 1]
+    
+    // Handle escape sequences in strings
+    if (inString && escaping) {
+      result += char
+      escaping = false
+      continue
+    }
+    
+    if (inString && char === '\\') {
+      result += char
+      escaping = true
+      continue
+    }
+    
+    // Toggle string state (only toggle if not in a comment and not escaped)
+    if (char === '"' && !inSingleLineComment && !inMultiLineComment) {
+      inString = !inString
+      result += char
+      continue
+    }
+    
+    // If we're in a string, just add the character
+    if (inString) {
+      result += char
+      continue
+    }
+    
+    // Handle single-line comments
+    if (!inMultiLineComment && char === '/' && nextChar === '/') {
+      inSingleLineComment = true
+      i++ // Skip the next /
+      continue
+    }
+    
+    if (inSingleLineComment && (char === '\n' || char === '\r')) {
+      inSingleLineComment = false
+      result += char // Keep the newline
+      continue
+    }
+    
+    if (inSingleLineComment) {
+      continue // Skip comment content
+    }
+    
+    // Handle multi-line comments
+    if (!inSingleLineComment && char === '/' && nextChar === '*') {
+      inMultiLineComment = true
+      i++ // Skip the *
+      continue
+    }
+    
+    if (inMultiLineComment && char === '*' && nextChar === '/') {
+      inMultiLineComment = false
+      i++ // Skip the /
+      continue
+    }
+    
+    if (inMultiLineComment) {
+      continue // Skip comment content
+    }
+    
+    // Normal character
+    result += char
+  }
+  
+  return result
 }
 
 export async function POST(request: Request) {
@@ -756,24 +907,25 @@ Proceed with the most appropriate response.`
         if (jsonMatch) {
           let jsonString = jsonMatch[0]
           
-          // Try parsing directly first
+          // Strategy 1: Try parsing with comment removal
           try {
-            parsed = JSON.parse(jsonString)
+            const withoutComments = removeJSONComments(jsonString)
+            parsed = JSON.parse(withoutComments)
+            console.log("✅ Successfully parsed JSON after removing comments")
           } catch (firstError) {
-            console.log("First parse failed, attempting to fix control characters...")
+            console.log("⚠️ First parse failed (with comment removal), trying control character fix...")
             
-            // If parsing fails, likely due to unescaped control characters in strings
-            // Strategy: manually scan and fix the JSON string
+            // Strategy 2: Remove comments and fix control characters
+            let withoutComments = removeJSONComments(jsonString)
             let fixed = ''
             let inString = false
             let escaping = false
             
-            for (let i = 0; i < jsonString.length; i++) {
-              const char = jsonString[i]
-              const charCode = jsonString.charCodeAt(i)
+            for (let i = 0; i < withoutComments.length; i++) {
+              const char = withoutComments[i]
+              const charCode = withoutComments.charCodeAt(i)
               
               if (escaping) {
-                // If we're in an escape sequence, keep the character as-is
                 fixed += char
                 escaping = false
                 continue
@@ -796,26 +948,70 @@ Proceed with the most appropriate response.`
                 if (char === '\n') fixed += '\\n'
                 else if (char === '\r') fixed += '\\r'
                 else if (char === '\t') fixed += '\\t'
-                else fixed += char // Keep other control chars as-is for now
+                else fixed += char
               } else {
                 fixed += char
               }
             }
             
-            parsed = JSON.parse(fixed)
+            try {
+              parsed = JSON.parse(fixed)
+              console.log("✅ Successfully parsed JSON after fixing control characters")
+            } catch (secondError) {
+              console.log("⚠️ Second parse failed, trying aggressive cleanup...")
+              
+              // Strategy 3: Aggressive cleanup - remove all comments line by line
+              const lines = jsonString.split('\n')
+              const cleanedLines = lines.map(line => {
+                // Remove trailing // comments but preserve // inside strings
+                let inStr = false
+                let result = ''
+                for (let i = 0; i < line.length; i++) {
+                  const char = line[i]
+                  const next = line[i + 1]
+                  
+                  if (char === '"' && (i === 0 || line[i - 1] !== '\\')) {
+                    inStr = !inStr
+                    result += char
+                  } else if (!inStr && char === '/' && next === '/') {
+                    // Found comment outside string, stop here
+                    break
+                  } else {
+                    result += char
+                  }
+                }
+                return result
+              })
+              
+              const aggressiveCleaned = cleanedLines.join('\n')
+              parsed = JSON.parse(aggressiveCleaned)
+              console.log("✅ Successfully parsed JSON after aggressive cleanup")
+            }
           }
         } else {
           // If no JSON found, wrap the text response
+          console.log("⚠️ No JSON pattern found in response, treating as text")
           parsed = { type: "text", message: cleanText }
         }
       } catch (error) {
-        console.error("JSON parsing error:", error)
-        console.error("Failed text sample:", text.substring(0, 200))
-        // If JSON parsing fails, treat as text response and clean it
+        console.error("❌ JSON parsing error:", error)
+        console.error("Failed text sample:", text.substring(0, 500))
+        console.error("Full text length:", text.length)
+        
+        // Last resort: treat as text response
         const cleanText = text.trim()
           .replace(/^```(?:json)?\s*\n?/, '')
           .replace(/\n?```\s*$/, '')
-        parsed = { type: "text", message: cleanText }
+        
+        // Try to extract just the message if it looks like there was an attempt at JSON
+        let message = cleanText
+        const messageMatch = cleanText.match(/"message"\s*:\s*"([^"]+)"/)
+        if (messageMatch) {
+          message = messageMatch[1]
+        }
+        
+        parsed = { type: "text", message: message || "AI response could not be parsed. Please try again." }
+        console.log("ℹ️ Falling back to text response")
       }
 
       // Normalize and validate response structure

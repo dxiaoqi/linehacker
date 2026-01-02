@@ -9,6 +9,7 @@ export type AIContentType =
   | "multi-choice" // Multiple choice (checkbox)
   | "input" // Text input
   | "select" // Dropdown select
+  | "error" // Error state with retry
 
 export interface AITextContent {
   type: "text"
@@ -93,6 +94,17 @@ export interface AISelectContent {
   searchable?: boolean
 }
 
+export interface AIErrorContent {
+  type: "error"
+  message: string
+  error?: {
+    message: string
+    code?: string
+    statusCode?: number
+  }
+  retryable: boolean
+}
+
 export type AIContent =
   | AITextContent
   | AIMarkdownContent
@@ -102,6 +114,7 @@ export type AIContent =
   | AIMultiChoiceContent
   | AIInputContent
   | AISelectContent
+  | AIErrorContent
 
 export interface AIInteractiveResponse {
   id: string

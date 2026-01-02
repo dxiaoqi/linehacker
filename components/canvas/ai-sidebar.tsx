@@ -16,12 +16,16 @@ import {
   Plus,
   Trash2,
   RefreshCw,
+  AlertCircle,
+  RotateCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useCanvasStore } from "@/lib/store/canvas-store"
 import type { TimelineEntry } from "@/lib/types/canvas"
@@ -38,16 +42,19 @@ function TimelineEntryComponent({
   entry,
   onConfirm,
   onReject,
+  onRetry,
 }: {
   entry: TimelineEntry
   onConfirm: () => void
   onReject: (reason?: string) => void
+  onRetry?: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
   const [showRejectInput, setShowRejectInput] = useState(false)
 
   const isAI = entry.author === "ai"
+  const isError = entry.type === "error"
   const hasPendingAction = entry.content.action?.status === "pending"
   const ActionIcon = entry.content.action?.type ? actionIcons[entry.content.action.type] : null
 
@@ -63,20 +70,31 @@ function TimelineEntryComponent({
 
   return (
     <div
-      className={cn("p-3 rounded-lg border", isAI ? "bg-muted/50" : "bg-card", hasPendingAction && "border-primary/50")}
+      className={cn(
+        "p-3 rounded-lg border",
+        isAI ? "bg-muted/50" : "bg-card",
+        hasPendingAction && "border-primary/50",
+        isError && "border-destructive/50 bg-destructive/5"
+      )}
     >
       <div className="flex items-start gap-2">
         <div
           className={cn(
             "w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0",
             isAI ? "bg-primary text-primary-foreground" : "bg-secondary",
+            isError && "bg-destructive text-destructive-foreground"
           )}
         >
-          {isAI ? "AI" : "You"}
+          {isError ? <AlertCircle className="w-4 h-4" /> : isAI ? "AI" : "You"}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs text-muted-foreground">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+            {isError && (
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-destructive/20 text-destructive">
+                Error
+              </span>
+            )}
             {entry.content.action && (
               <span
                 className={cn(
@@ -95,7 +113,17 @@ function TimelineEntryComponent({
             )}
           </div>
 
-          <p className="text-sm">{entry.content.text}</p>
+          <p className={cn("text-sm", isError && "text-destructive")}>{entry.content.text}</p>
+
+          {/* Error Details */}
+          {isError && entry.error && (
+            <div className="mt-2 p-2 rounded bg-destructive/10 border border-destructive/20">
+              <p className="text-xs text-muted-foreground">{entry.error.message}</p>
+              {entry.error.code && (
+                <p className="text-xs text-muted-foreground mt-1">Code: {entry.error.code}</p>
+              )}
+            </div>
+          )}
 
           {entry.content.action && (
             <Collapsible open={expanded} onOpenChange={setExpanded}>
@@ -151,6 +179,16 @@ function TimelineEntryComponent({
           {entry.content.action?.status === "rejected" && entry.content.action.rejectionReason && (
             <p className="mt-2 text-xs text-muted-foreground italic">Reason: {entry.content.action.rejectionReason}</p>
           )}
+
+          {/* Retry Button for Errors */}
+          {isError && entry.error?.retryable && onRetry && (
+            <div className="mt-3">
+              <Button size="sm" variant="outline" className="h-7 gap-1" onClick={onRetry}>
+                <RotateCw className="w-3 h-3" />
+                Retry
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -170,26 +208,32 @@ export function AISidebar() {
   const handleSendMessage = useCallback(async () => {
     if (!input.trim() || !currentNodeForAI || isLoading) return
 
+    const userMessage = input
     addTimelineEntry(currentNodeForAI, {
       author: "user",
       type: "comment",
-      content: { text: input },
+      content: { text: userMessage },
     })
 
     setInput("")
     setIsLoading(true)
 
+    const requestPayload = {
+      nodeData: currentNode?.data,
+      message: userMessage,
+    }
+
     try {
       const res = await fetch("/api/canvas-ai/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nodeData: currentNode?.data,
-          message: input,
-        }),
+        body: JSON.stringify(requestPayload),
       })
 
-      if (!res.ok) throw new Error("Failed to get response")
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`)
+      }
 
       const data = await res.json()
 
@@ -207,12 +251,18 @@ export function AISidebar() {
         },
       })
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
       addTimelineEntry(currentNodeForAI, {
         author: "ai",
-        type: "comment",
+        type: "error",
         content: {
-          text: "Sorry, I encountered an error. Please try again.",
+          text: "Sorry, I encountered an error while processing your request.",
         },
+        error: {
+          message: errorMessage,
+          retryable: true,
+        },
+        retryPayload: requestPayload,
       })
     } finally {
       setIsLoading(false)
@@ -237,22 +287,81 @@ export function AISidebar() {
     [currentNodeForAI, updateTimelineStatus],
   )
 
+  const handleRetry = useCallback(
+    async (entry: TimelineEntry) => {
+      if (!currentNodeForAI || isLoading || !entry.retryPayload) return
+
+      setIsLoading(true)
+
+      try {
+        const res = await fetch("/api/canvas-ai/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(entry.retryPayload),
+        })
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`)
+        }
+
+        const data = await res.json()
+
+        addTimelineEntry(currentNodeForAI, {
+          author: "ai",
+          type: data.action ? "modification" : "comment",
+          content: {
+            text: data.text,
+            action: data.action
+              ? {
+                  ...data.action,
+                  status: "pending" as const,
+                }
+              : undefined,
+          },
+        })
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+        addTimelineEntry(currentNodeForAI, {
+          author: "ai",
+          type: "error",
+          content: {
+            text: "Retry failed. Please check your connection and try again.",
+          },
+          error: {
+            message: errorMessage,
+            retryable: true,
+          },
+          retryPayload: entry.retryPayload,
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [currentNodeForAI, isLoading, addTimelineEntry],
+  )
+
   const handleStartAnalysis = useCallback(async () => {
     if (!currentNodeForAI || isLoading) return
 
     setIsLoading(true)
 
+    const requestPayload = {
+      nodeData: currentNode?.data,
+      message: "Please analyze this node and provide suggestions.",
+    }
+
     try {
       const res = await fetch("/api/canvas-ai/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nodeData: currentNode?.data,
-          message: "Please analyze this node and provide suggestions.",
-        }),
+        body: JSON.stringify(requestPayload),
       })
 
-      if (!res.ok) throw new Error("Failed to get response")
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`)
+      }
 
       const data = await res.json()
 
@@ -270,12 +379,18 @@ export function AISidebar() {
         },
       })
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
       addTimelineEntry(currentNodeForAI, {
         author: "ai",
-        type: "comment",
+        type: "error",
         content: {
           text: "Sorry, I encountered an error analyzing this node.",
         },
+        error: {
+          message: errorMessage,
+          retryable: true,
+        },
+        retryPayload: requestPayload,
       })
     } finally {
       setIsLoading(false)
@@ -331,6 +446,7 @@ export function AISidebar() {
                 entry={entry}
                 onConfirm={() => handleConfirm(entry.id)}
                 onReject={(reason) => handleReject(entry.id, reason)}
+                onRetry={entry.type === "error" ? () => handleRetry(entry) : undefined}
               />
             ))
           )}

@@ -24,7 +24,7 @@ export interface TimelineEntry {
   id: string
   author: "user" | "ai"
   timestamp: string
-  type: "comment" | "modification" | "connection_suggestion"
+  type: "comment" | "modification" | "connection_suggestion" | "error"
   content: {
     text: string
     action?: {
@@ -35,6 +35,16 @@ export interface TimelineEntry {
       status: "pending" | "confirmed" | "rejected"
       rejectionReason?: string
     }
+  }
+  error?: {
+    message: string
+    code?: string
+    retryable: boolean
+  }
+  // Store the original request for retry
+  retryPayload?: {
+    nodeData: any
+    message: string
   }
 }
 

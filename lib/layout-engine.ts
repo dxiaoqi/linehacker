@@ -73,6 +73,58 @@ function buildGraph(nodes: CanvasNode[], edges: CanvasEdge[]): {
 }
 
 /**
+ * Detect cycles in the graph using DFS
+ */
+function detectCycle(
+  nodeId: string,
+  children: Map<string, string[]>,
+  visited: Set<string>,
+  recursionStack: Set<string>,
+  path: string[] = []
+): string[] | null {
+  visited.add(nodeId)
+  recursionStack.add(nodeId)
+  path.push(nodeId)
+
+  const childIds = children.get(nodeId) || []
+  for (const childId of childIds) {
+    if (!visited.has(childId)) {
+      const cyclePath = detectCycle(childId, children, visited, recursionStack, [...path])
+      if (cyclePath) return cyclePath
+    } else if (recursionStack.has(childId)) {
+      // Found a cycle
+      const cycleStart = path.indexOf(childId)
+      return [...path.slice(cycleStart), childId]
+    }
+  }
+
+  recursionStack.delete(nodeId)
+  return null
+}
+
+/**
+ * Check for cycles in the entire graph
+ */
+function checkForCycles(
+  nodes: CanvasNode[],
+  children: Map<string, string[]>
+): string[] | null {
+  const visited = new Set<string>()
+  const recursionStack = new Set<string>()
+
+  for (const node of nodes) {
+    if (!visited.has(node.id)) {
+      const cyclePath = detectCycle(node.id, children, visited, recursionStack)
+      if (cyclePath) {
+        return cyclePath
+      }
+    }
+  }
+
+  return null
+}
+
+/**
  * Topological sort to determine node levels (left-to-right)
  */
 function assignLevels(
@@ -80,6 +132,24 @@ function assignLevels(
   edges: CanvasEdge[],
 ): Map<string, number> {
   const { inDegree, children } = buildGraph(nodes, edges)
+  
+  // Check for cycles before proceeding
+  const cyclePath = checkForCycles(nodes, children)
+  
+  if (cyclePath) {
+    // Break the cycle by removing the last edge
+    const cycleStart = cyclePath[0]
+    const cycleEnd = cyclePath[cyclePath.length - 2]
+    
+    // Remove the problematic edge from children map
+    const childList = children.get(cycleEnd) || []
+    const filteredChildren = childList.filter(id => id !== cycleStart)
+    children.set(cycleEnd, filteredChildren)
+    
+    // Update inDegree
+    inDegree.set(cycleStart, (inDegree.get(cycleStart) || 1) - 1)
+  }
+  
   const levels = new Map<string, number>()
   const queue: string[] = []
 
@@ -91,10 +161,30 @@ function assignLevels(
     }
   })
 
-  // BFS to assign levels
+  // BFS to assign levels with cycle detection
+  const MAX_ITERATIONS = nodes.length * nodes.length // Safety limit
+  let iterations = 0
+  const processedCount = new Map<string, number>() // Track how many times each node is processed
+
   while (queue.length > 0) {
+    iterations++
+    
+    // Safety check: prevent infinite loops
+    if (iterations > MAX_ITERATIONS) {
+      break
+    }
+
     const currentId = queue.shift()!
     const currentLevel = levels.get(currentId) || 0
+    
+    // Track processing count for cycle detection
+    const count = (processedCount.get(currentId) || 0) + 1
+    processedCount.set(currentId, count)
+    
+    // If a node has been processed too many times, it's likely in a cycle
+    if (count > nodes.length) {
+      continue
+    }
 
     const childIds = children.get(currentId) || []
     childIds.forEach((childId) => {
@@ -330,7 +420,7 @@ export function layoutNodes(
 
   // Resolve any remaining overlaps
   const finalPositions = resolveOverlaps(nodes, allPositions)
-
+  
   return finalPositions
 }
 

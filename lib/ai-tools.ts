@@ -220,9 +220,6 @@ export function executeAIAction(action: AIAction): AIActionResult {
       }
 
       if (!sourceNode || !targetNode) {
-        const sourceRef = action.sourceTitle || action.sourceNodeId || "unknown"
-        const targetRef = action.targetTitle || action.targetNodeId || "unknown"
-        console.warn(`Connect action failed: Nodes not found. Source: ${sourceRef}, Target: ${targetRef}`)
         return {
           success: false,
           message: `One or both nodes not found: Source "${sourceRef}", Target "${targetRef}"`,
@@ -368,12 +365,29 @@ export function executeAIAction(action: AIAction): AIActionResult {
   }
 }
 
-// Execute multiple AI actions
-export function executeAIActions(actions: AIAction[]): AIActionResult[] {
-  const results = actions.map((action) => executeAIAction(action))
+// Execute multiple AI actions (async to prevent UI blocking)
+export async function executeAIActions(actions: AIAction[]): Promise<AIActionResult[]> {
+  const results: AIActionResult[] = []
+  const BATCH_SIZE = 5 // Process 5 actions at a time
+  
+  // Process actions in batches to prevent UI blocking
+  for (let i = 0; i < actions.length; i += BATCH_SIZE) {
+    const batch = actions.slice(i, i + BATCH_SIZE)
+    
+    // Process batch
+    const batchResults = batch.map((action) => executeAIAction(action))
+    results.push(...batchResults)
+    
+    // Yield to browser between batches
+    if (i + BATCH_SIZE < actions.length) {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    }
+  }
   
   // Apply automatic layout after all actions are executed
-  // Only apply if we have multiple nodes
+  // Defer layout to next frame to ensure all DOM updates are complete
+  await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
+  
   const store = useCanvasStore.getState()
   const canvasNodes = store.nodes.filter((n) => n.type === "canvas-node")
   const canvasEdges = store.edges
